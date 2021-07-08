@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # load libraries
 from pandas import read_csv
 import matplotlib.pyplot as plt
@@ -15,8 +16,8 @@ dataset.isnull().sum()
 # ph 491 nas, sulfate 781 nas Trihalomethanes 162 nas
 
 # all known values of ph in dataset are safe by who standards
-# provides no infomation so delete column
-del dataset['ph']
+# take mean for nas but prepare to remove column if variable is unimportant 
+dataset['ph'].fillna(value=dataset['ph'].mean(), inplace=True)
 
 # nearly a quatre of sulfates are missing 
 # take average to replace nas
@@ -85,3 +86,46 @@ plt.show()
 
 # all data has correct values 
 # can move onto variable selection
+
+# load libraries
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import StandardScaler
+from sklearn.naive_bayes import GaussianNB
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import StratifiedKFold
+from pandas import DataFrame
+
+x = dataset.drop('Potability',axis = 1)
+y = dataset['Potability']
+
+# standardise numerical data
+names = x.columns
+st_x= StandardScaler()    
+x= st_x.fit_transform(x)  
+X = DataFrame(x,columns = names)
+
+# evaluate performance of variables
+model = RandomForestClassifier()
+model.fit(X,y)
+plt.bar(X.columns,model.feature_importances_)
+plt.xticks(rotation=90)
+plt.show()
+variable_importance = [(X.columns[list(model.feature_importances_).index(i)],i) for i in 
+sorted(model.feature_importances_, reverse = True)]
+
+# all variables seem useful but we can check with a simple model
+no_feat = []
+data = []
+for i in range(len(variable_importance)):
+    data.append(variable_importance[i][0])
+    X_train, X_test, Y_train, Y_test = train_test_split(X[data],y,test_size=0.2, random_state=1)
+    model = GaussianNB()
+    kfold = StratifiedKFold(n_splits=10, random_state=1, shuffle=True)
+    cv_results = cross_val_score(model, X_train, Y_train, cv=kfold, scoring='accuracy')
+    no_feat.append((i+1,cv_results.mean())) 
+
+# no significant drop off in accuracy when adding variables
+# we will keep all variables in the moddelling
+
+
