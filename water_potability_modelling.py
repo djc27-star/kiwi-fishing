@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # load libraries
 from pandas import read_csv
 import matplotlib.pyplot as plt
@@ -128,4 +128,77 @@ for i in range(len(variable_importance)):
 # no significant drop off in accuracy when adding variables
 # we will keep all variables in the moddelling
 
+# Split-out validation dataset
+X_train, X_validation, Y_train, Y_validation = train_test_split(X, y, test_size=0.20, random_state=1, shuffle=True)
 
+# Spot Check Algorithms
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.svm import SVC
+
+models = []
+models.append(('LR', LogisticRegression()))
+models.append(('LDA', LinearDiscriminantAnalysis()))
+models.append(('KNN', KNeighborsClassifier()))
+models.append(('CART', DecisionTreeClassifier()))
+models.append(('NB', GaussianNB()))
+models.append(('SVC', SVC(gamma='auto')))
+# evaluate each model in turn
+results = []
+names = []
+for name, model in models:
+	kfold = StratifiedKFold(n_splits=10, random_state=1, shuffle=True)
+	cv_results = cross_val_score(model, X_train, Y_train, cv=kfold, scoring='accuracy')
+	results.append(cv_results)
+	names.append(name)
+	print('%s: %f (%f)' % (name, cv_results.mean(), cv_results.std()))
+# Compare Algorithms
+plt.boxplot(results, labels=names)
+plt.title('Algorithm Comparison')
+plt.show()  
+
+# svc appears to be best model
+
+# try ensemble models
+from sklearn.ensemble import BaggingClassifier
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.ensemble import VotingClassifier
+from sklearn.ensemble import ExtraTreesClassifier
+
+# build more complex algorithms
+models2 = []
+models2.append(("BDT",BaggingClassifier()))
+models2.append(("RF",RandomForestClassifier()))
+models2.append(("ETC",ExtraTreesClassifier()))
+models2.append(("ABC",AdaBoostClassifier()))
+models2.append(("SGB",GradientBoostingClassifier()))
+models2.append(("VOTE",VotingClassifier([models[0],models[1],models[2],models[4],models[5]])))
+# evaluate each complex model in turn
+results2 = []
+names2 = []
+for name, model in models2:
+	kfold = StratifiedKFold(n_splits=9, random_state=1, shuffle=True)
+	cv_results = cross_val_score(model, X_train, Y_train, cv=kfold, scoring='accuracy')
+	results2.append(cv_results)
+	names2.append(name)
+	print('%s: %f (%f)' % (name, cv_results.mean(), cv_results.std()))
+# Compare Algorithms
+plt.boxplot(results2, labels=names2)
+plt.title('Algorithm Comparison')
+plt.show() 
+
+# svc still appears to be best model but rf is close
+# will optimise both to find optimal model
+
+# optimise svm
+from sklearn.model_selection import GridSearchCV
+rs = {"C" : [0.1, 1, 10, 100, 1000],
+      "kernel" : ['linear', 'poly', 'rbf'],
+      "gamma" :[0.1,1,10,100],
+      "degree" : [2, 3, 4, 5, 6]}
+grid = GridSearchCV(estimator = SVC(), param_grid = rs)
+grid.fit(X_train,Y_train)
+grid.best_params_
