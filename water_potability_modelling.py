@@ -15,73 +15,89 @@ dataset.describe()
 dataset.isnull().sum()
 # ph 491 nas, sulfate 781 nas Trihalomethanes 162 nas
 
-# all known values of ph in dataset are safe by who standards
-# take mean for nas but prepare to remove column if variable is unimportant 
-dataset['ph'].fillna(value=dataset['ph'].mean(), inplace=True)
+# remove nas with mean for each output
+dataset['ph'] = dataset['ph'].fillna(dataset.groupby('Potability')
+                                                     ['ph'].transform('mean'))
 
-# nearly a quatre of sulfates are missing 
-# take average to replace nas
-dataset['Sulfate'].fillna(value=dataset['Sulfate'].mean(), inplace=True)
+dataset['Sulfate'] = dataset['Sulfate'].fillna(dataset.groupby('Potability')
+                                                               ['Sulfate'].transform('mean'))
 
-for i in dataset['Trihalomethanes']:
-    if i > 80:
-        print('value greater than 80')
-        break
-    
-# values in column surpass who safe levels so provides information
-# take mean to replace nas
-dataset['Trihalomethanes'].fillna(value=dataset['Trihalomethanes'].mean(), inplace=True)
+dataset['Trihalomethanes'] = dataset['Trihalomethanes'].fillna(dataset.groupby('Potability')
+                                                        ['Trihalomethanes'].transform('mean'))
 
 # assess each variable has values in correct range and examine of the data
 dataset.head(5)
 dataset.describe()
 dataset.columns
 
+for i in dataset['ph']:
+    assert isinstance(i,float) and i > 0
+sns.distplot( dataset['ph'])
+plt.show()
+sns.boxplot(x = 'Potability', y = 'ph',data =dataset)
+plt.show()
+
 for i in dataset['Hardness']:
     assert isinstance(i,float) and i > 0
-dataset['Hardness'].plot(kind='box')
+sns.distplot( dataset['Hardness'])
+plt.show()
+sns.boxplot(x = 'Potability', y = 'Hardness',data =dataset)
 plt.show()
 
 for i in dataset['Solids']:
     assert isinstance(i,float) and i > 0
-dataset['Solids'].plot(kind='box')
+sns.distplot( dataset['Solids'])
+plt.show()
+sns.boxplot(x = 'Potability', y = 'Solids',data =dataset)
 plt.show()
 
 for i in dataset['Chloramines']:
     assert isinstance(i,float) and i > 0
-dataset['Chloramines'].plot(kind='box')
+sns.distplot( dataset['Chloramines'])
+plt.show()
+sns.boxplot(x = 'Potability', y = 'Chloramines',data =dataset)
 plt.show()
 
 for i in dataset['Sulfate']:
     assert isinstance(i,float) and i > 0
-dataset['Sulfate'].plot(kind='box')
+sns.distplot( dataset['Sulfate'])
+plt.show()
+sns.boxplot(x = 'Potability', y = 'Sulfate',data =dataset)
 plt.show()
 
 for i in dataset['Conductivity']:
     assert isinstance(i,float) and i > 0
-dataset['Conductivity'].plot(kind='box')
+sns.distplot( dataset['Conductivity'])
+plt.show()
+sns.boxplot(x = 'Potability', y = 'Conductivity',data =dataset)
 plt.show()
 
 for i in dataset['Organic_carbon']:
     assert isinstance(i,float) and i > 0
-dataset['Organic_carbon'].plot(kind='box')
+sns.distplot( dataset['Organic_carbon'])
+plt.show()
+sns.boxplot(x = 'Potability', y = 'Organic_carbon',data =dataset)
 plt.show()
 
 for i in dataset['Trihalomethanes']:
     assert isinstance(i,float) and i > 0
-dataset['Trihalomethanes'].plot(kind='box')
+sns.distplot( dataset['Trihalomethanes'])
+plt.show()
+sns.boxplot(x = 'Potability', y = 'Trihalomethanes',data =dataset)
 plt.show()
 
 for i in dataset['Turbidity']:
     assert isinstance(i,float) and i > 0
-dataset['Turbidity'].plot(kind='box')
+sns.distplot( dataset['Turbidity'])
+plt.show()
+sns.boxplot(x = 'Potability', y = 'Turbidity',data =dataset)
 plt.show()
 
 for i in dataset['Potability']:
     assert i in [0,1]
 print(dataset.groupby('Potability').size())
 
-sns.pairplot(dataset)
+sns.pairplot(dataset, hue = "Potability")
 plt.show()
 
 # all data has correct values 
@@ -114,7 +130,8 @@ plt.show()
 variable_importance = [(X.columns[list(model.feature_importances_).index(i)],i) for i in 
 sorted(model.feature_importances_, reverse = True)]
 
-# all variables seem useful but we can check with a simple model
+# all variables appear to be important features
+
 no_feat = []
 data = []
 for i in range(len(variable_importance)):
@@ -144,7 +161,7 @@ models.append(('LDA', LinearDiscriminantAnalysis()))
 models.append(('KNN', KNeighborsClassifier()))
 models.append(('CART', DecisionTreeClassifier()))
 models.append(('NB', GaussianNB()))
-models.append(('SVC', SVC(gamma='auto')))
+models.append(('SVC', SVC()))
 # evaluate each model in turn
 results = []
 names = []
@@ -159,28 +176,26 @@ plt.boxplot(results, labels=names)
 plt.title('Algorithm Comparison')
 plt.show()  
 
-# svc appears to be best model
+# cart is clearly strongest model, suggests random forest will be strong
 
 # try ensemble models
 from sklearn.ensemble import BaggingClassifier
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.ensemble import GradientBoostingClassifier
-from sklearn.ensemble import VotingClassifier
 from sklearn.ensemble import ExtraTreesClassifier
 
 # build more complex algorithms
 models2 = []
-models2.append(("BDT",BaggingClassifier()))
+models2.append(("BC",BaggingClassifier()))
 models2.append(("RF",RandomForestClassifier()))
 models2.append(("ETC",ExtraTreesClassifier()))
 models2.append(("ABC",AdaBoostClassifier()))
-models2.append(("SGB",GradientBoostingClassifier()))
-models2.append(("VOTE",VotingClassifier([models[0],models[1],models[2],models[4],models[5]])))
+models2.append(("GBC",GradientBoostingClassifier()))
 # evaluate each complex model in turn
 results2 = []
 names2 = []
 for name, model in models2:
-	kfold = StratifiedKFold(n_splits=9, random_state=1, shuffle=True)
+	kfold = StratifiedKFold(n_splits=10, random_state=1, shuffle=True)
 	cv_results = cross_val_score(model, X_train, Y_train, cv=kfold, scoring='accuracy')
 	results2.append(cv_results)
 	names2.append(name)
@@ -190,15 +205,56 @@ plt.boxplot(results2, labels=names2)
 plt.title('Algorithm Comparison')
 plt.show() 
 
-# svc still appears to be best model but rf is close
-# will optimise both to find optimal model
+# GBC and RF are the strongest models
+# shall optimise both and pick strongest 
 
-# optimise svm
+# optimise RF
 from sklearn.model_selection import GridSearchCV
-rs = {"C" : [0.1, 1, 10, 100, 1000],
-      "kernel" : ['linear', 'poly', 'rbf'],
-      "gamma" :[0.1,1,10,100],
-      "degree" : [2, 3, 4, 5, 6]}
-grid = GridSearchCV(estimator = SVC(), param_grid = rs)
+
+rs = {'bootstrap': [True, False],
+ 'max_features': ['auto', 'sqrt','log2'],
+ 'criterion' : ['entropy', 'gini'],
+ 'n_estimators': [100,300,500]}
+grid = GridSearchCV(estimator = RandomForestClassifier(), param_grid = rs,cv =10)
 grid.fit(X_train,Y_train)
 grid.best_params_
+
+kfold = StratifiedKFold(n_splits=9, random_state=1, shuffle=True)
+cv_results = cross_val_score(RandomForestClassifier(bootstrap = True, 
+            max_features = 'sqrt', criterion = 'gini', n_estimators = 300),
+                             X_train, Y_train, cv=kfold, 
+                             scoring='accuracy')
+print("rf optimised", " ", cv_results.mean()) # 0.7927369538723866
+
+# optimise GBC
+rs = {"n_estimators":[500],
+    "max_depth":[5,7,9],
+    "learning_rate":[0.1,1,5,10],
+    "loss" : ['deviance','exponential']}
+grid = GridSearchCV(estimator = GradientBoostingClassifier(), param_grid = rs,cv =10)
+grid.fit(X_train,Y_train)
+grid.best_params_
+
+kfold = StratifiedKFold(n_splits=9, random_state=1, shuffle=True)
+cv_results = cross_val_score(GradientBoostingClassifier(learning_rate = 1,
+                                                        loss = 'exponential',
+                                                        max_depth = 7,
+                                                        n_estimators = 500),
+                             X_train, Y_train, cv=kfold, 
+                             scoring='accuracy')
+print("sgb optimised", " ", cv_results.mean())
+
+# RF appears to be our strongest model so will now validate it 
+from sklearn.metrics import classification_report
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import accuracy_score
+
+
+model = RandomForestClassifier(bootstrap = True, max_features = 'sqrt', 
+                               criterion = 'gini', n_estimators = 300)
+model.fit(X_train,Y_train)
+predictions = model.predict(X_validation)
+
+print(accuracy_score(Y_validation, predictions)) # 0.8033536585365854
+print(confusion_matrix(Y_validation, predictions))
+print(classification_report(Y_validation, predictions))
